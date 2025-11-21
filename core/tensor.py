@@ -1,4 +1,4 @@
-from .device import xp
+from . import device
 
 class Tensor: 
     # =============================
@@ -6,7 +6,7 @@ class Tensor:
     # =============================
 
     def __init__(self, data, req_grad=False, op="", parents={}):
-        self.data = xp.array(data)
+        self.data = device.xp.array(data)
         self.grad = None
         self.req_grad = req_grad
 
@@ -69,7 +69,7 @@ class Tensor:
         
         build(self)
 
-        self.grad = xp.ones_like(self.data)
+        self.grad = device.xp.ones_like(self.data)
 
         for v in reversed(topo):
             v._backward()

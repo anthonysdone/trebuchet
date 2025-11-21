@@ -1,4 +1,4 @@
-from .device import xp
+from . import device
 from .registry import register_optim
 
 class Optimizer:
@@ -19,7 +19,7 @@ class SGD(Optimizer):
         self.lr = lr
         self.momentum = momentum
         self.weight_decay = weight_decay
-        self.velocity = [xp.zeros_like(p.data) for p in self.params]
+        self.velocity = [device.xp.zeros_like(p.data) for p in self.params]
     
     def step(self):
         for i, p in enumerate(self.params):
@@ -48,8 +48,8 @@ class Adam(Optimizer):
         self.betas = betas
         self.eps = eps
         self.weight_decay = weight_decay
-        self.m = [xp.zeros_like(p.data) for p in self.params]
-        self.v = [xp.zeros_like(p.data) for p in self.params]
+        self.m = [device.xp.zeros_like(p.data) for p in self.params]
+        self.v = [device.xp.zeros_like(p.data) for p in self.params]
         self.t = 0
 
     def step(self):
@@ -68,6 +68,6 @@ class Adam(Optimizer):
             m_hat = self.m[i] / (1 - self.betas[0] ** self.t)
             v_hat = self.v[i] / (1 - self.betas[1] ** self.t)
 
-            p.data = p.data - self.lr * m_hat / (xp.sqrt(v_hat) + self.eps)
+            p.data = p.data - self.lr * m_hat / (device.xp.sqrt(v_hat) + self.eps)
 
         self.zero_grad()

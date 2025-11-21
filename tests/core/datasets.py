@@ -8,7 +8,6 @@ def get_xor_data():
     return x, y
     
 def get_mnist_data():
-    xp = device.xp
     import urllib.request
     import gzip
     import os
@@ -31,14 +30,24 @@ def get_mnist_data():
             urllib.request.urlretrieve(base_url + filename, path)
     
     def load_images(filename):
+        import numpy as np
         with gzip.open(f"./data/mnist/{filename}", "rb") as f:
-            data = xp.frombuffer(f.read(), xp.uint8, offset=16)
-        return data.reshape(-1, 28*28).astype(xp.float32) / 255.0
+            data = np.frombuffer(f.read(), np.uint8, offset=16)
+        data = data.reshape(-1, 28*28).astype(np.float32) / 255.0
+        # Convert to target backend if needed
+        if device.xp.__name__ != 'numpy':
+            data = device.xp.array(data)
+        return data
     
     def load_labels(filename):
+        import numpy as np
         with gzip.open(f"./data/mnist/{filename}", "rb") as f:
-            data = xp.frombuffer(f.read(), xp.uint8, offset=8)
-        return data.astype(xp.int32)
+            data = np.frombuffer(f.read(), np.uint8, offset=8)
+        data = data.astype(np.int32)
+        # Convert to target backend if needed
+        if device.xp.__name__ != 'numpy':
+            data = device.xp.array(data)
+        return data
     
     x_train = Tensor(load_images(files["train_images"]))
     y_train = Tensor(load_labels(files["train_labels"]))

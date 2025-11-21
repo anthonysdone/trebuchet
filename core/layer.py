@@ -1,4 +1,4 @@
-from .device import xp
+from . import device
 from .tensor import Tensor
 from .registry import register_layer
 from . import ops
@@ -26,13 +26,13 @@ class Layer:
 class Linear(Layer):
     def __init__(self, in_features, out_features, bias=True):
         super().__init__()
-        limit = xp.sqrt(6 / (in_features + out_features))
+        limit = device.xp.sqrt(6 / (in_features + out_features))
         
         self.weight = Tensor(
-            xp.random.uniform(-limit, limit, (in_features, out_features)), 
+            device.xp.random.uniform(-limit, limit, (in_features, out_features)), 
             req_grad=True)
         self.bias = (
-            Tensor(xp.zeros(out_features), req_grad=True) if bias else None)
+            Tensor(device.xp.zeros(out_features), req_grad=True) if bias else None)
         
     def forward(self, x): 
         out = x @ self.weight
