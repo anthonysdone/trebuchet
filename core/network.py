@@ -78,12 +78,16 @@ class Network:
         history = []
         for epoch in range(epochs):
             epoch_loss = 0.0
-            total_batches = len(dataloader)
+            batch_count = 0
 
-            for batch_idx, (x_batch, y_batch) in enumerate(dataloader):
+            batches = list(dataloader)
+            total_batches = len(batches)
+
+            for batch_idx, (x_batch, y_batch) in enumerate(batches):
                 stats = self.train_step(x_batch, y_batch, loss_name, optimizer)
                 epoch_loss += stats["loss"].data
+                batch_count += 1
                 if callback is None:
                     self.default_callback(epoch, batch_idx, total_batches, stats)
-            history.append(epoch_loss / len(dataloader))
+            history.append(epoch_loss / batch_count if batch_count > 0 else 0)
         return history
