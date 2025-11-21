@@ -1,2 +1,5 @@
+__pycache__/
 *.pyc
+/trebuchet.egg-info/
+venv/
 .DS_Store

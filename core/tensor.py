@@ -12,7 +12,7 @@ class Tensor:
 
         self.op = op
         self.parents = parents
-        self.backward = lambda: None
+        self._backward = lambda: None
     
     # =============================
     # Helpers
@@ -72,4 +72,4 @@ class Tensor:
         self.grad = xp.ones_like(self.data)
 
         for v in reversed(topo):
-            v.backward
+            v._backward()

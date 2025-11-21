@@ -6,6 +6,17 @@ from .tensor import Tensor
 # Elementwise
 # =============================
 
+def unbroadcast(grad, shape):
+    ndim_diff = grad.ndim - len(shape)
+    for _ in range(ndim_diff):
+        grad = grad.sum(axis=0)
+
+    for i, (dim_orig, dim_grad) in enumerate(zip(shape, grad.shape)):
+        if dim_orig == 1 and dim_grad > 1:
+            grad = grad.sum(axis=i, keepdims=True)
+    
+    return grad
+
 @register_op("add")
 def add(a, b):
     out = Tensor(a.data + b.data)
@@ -14,16 +25,19 @@ def add(a, b):
     out.parents = {a, b}
 
     def backward():
-        if a.requires_grad:
+        if a.req_grad:
             if a.grad is None:
                 a.grad = xp.zeros_like(a.data)
-            a.grad = a.grad + out.grad
-        if b.requires_grad:
+            grad_a = unbroadcast(out.grad, a.data.shape)
+            a.grad = a.grad + grad_a
+            
+        if b.req_grad:
             if b.grad is None:
                 b.grad = xp.zeros_like(b.data)
-            b.grad = b.grad + out.grad
+            grad_b = unbroadcast(out.grad, b.data.shape)
+            b.grad = b.grad + grad_b
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 @register_op("sub")
@@ -34,16 +48,19 @@ def sub(a, b):
     out.parents = {a, b}
 
     def backward():
-        if a.requires_grad:
+        if a.req_grad:
             if a.grad is None:
                 a.grad = xp.zeros_like(a.data)
-            a.grad = a.grad + out.grad
-        if b.requires_grad:
+            grad_a = unbroadcast(out.grad, a.data.shape)
+            a.grad = a.grad + grad_a
+            
+        if b.req_grad:
             if b.grad is None:
                 b.grad = xp.zeros_like(b.data)
-            b.grad = b.grad - out.grad
+            grad_b = unbroadcast(out.grad, b.data.shape)
+            b.grad = b.grad - grad_b
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 @register_op("mul")
@@ -54,16 +71,19 @@ def mul(a, b):
     out.parents = {a, b}
 
     def backward():
-        if a.requires_grad:
+        if a.req_grad:
             if a.grad is None:
                 a.grad = xp.zeros_like(a.data)
-            a.grad = a.grad + out.grad * b.data
-        if b.requires_grad:
+            grad_a = unbroadcast(out.grad * b.data, a.data.shape)
+            a.grad = a.grad + grad_a
+            
+        if b.req_grad:
             if b.grad is None:
                 b.grad = xp.zeros_like(b.data)
-            b.grad = b.grad + out.grad * a.data
+            grad_b = unbroadcast(out.grad * a.data, b.data.shape)
+            b.grad = b.grad + grad_b
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 # =============================
@@ -78,16 +98,16 @@ def matmul(a, b):
     out.parents = {a, b}
 
     def backward():
-        if a.requires_grad:
+        if a.req_grad:
             if a.grad is None:
                 a.grad = xp.zeros_like(a.data)
             a.grad = a.grad + out.grad @ b.data.T
-        if b.requires_grad:
+        if b.req_grad:
             if b.grad is None:
                 b.grad = xp.zeros_like(b.data)
             b.grad = b.grad + a.data.T @ out.grad
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 # =============================
@@ -102,12 +122,12 @@ def sum(x, axis=None, keepdims=False):
     out.parents = {x}
 
     def backward():
-        if x.requires_grad:
+        if x.req_grad:
             if x.grad is None: 
                 x.grad = xp.zeros_like(x.data)
             x.grad = x.grad + out.grad * xp.ones_like(x.data)
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 # =============================
@@ -123,12 +143,12 @@ def relu(x):
     out.parents = {x}
 
     def backward():
-        if x.requires_grad:
+        if x.req_grad:
             if x.grad is None: 
                 x.grad = xp.zeros_like(x.data)
             x.grad = x.grad + out.grad * mask
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 @register_op("sigmoid")
@@ -139,12 +159,12 @@ def sigmoid(x):
     out.parents = {x}
 
     def backward():
-        if x.requires_grad:
+        if x.req_grad:
             if x.grad is None: 
                 x.grad = xp.zeros_like(x.data)
             x.grad = x.grad + out.grad * (out.data * (1 - out.data))
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 @register_op("tanh")
@@ -155,12 +175,12 @@ def tanh(x):
     out.parents = {x}
 
     def backward():
-        if x.requires_grad:
+        if x.req_grad:
             if x.grad is None: 
                 x.grad = xp.zeros_like(x.data)
             x.grad = x.grad + out.grad * (1 - out.data ** 2)
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 @register_op("softmax")
@@ -174,13 +194,13 @@ def softmax(x, axis=-1):
     out.parents = {x}
 
     def backward():
-        if x.requires_grad:
+        if x.req_grad:
             if x.grad is None: 
                 x.grad = xp.zeros_like(x.data)
             sum_term = xp.sum(out.grad * out.data, axis=axis, keepdims=True)
             x.grad = x.grad + out.data * (out.grad - sum_term)
             
-    out.backward = backward
+    out._backward = backward
     return out
 
 # =============================
@@ -197,24 +217,25 @@ def mse_loss(pred, target):
     out.parents = {pred}
 
     def backward():
-        if pred.requires_grad:
+        if pred.req_grad:
             if pred.grad is None: 
                 pred.grad = xp.zeros_like(pred.data)
             pred.grad = pred.grad + (2 * diff / diff.size) * out.grad
 
-    out.backward = backward
+    out._backward = backward
     return out
 
 @register_op("cross_entropy_loss")
 def cross_entropy_loss(pred, target):
-    eps = 1e-8
-    pred_clipped = xp.clip(pred.data, eps, 1-eps)
+    logits_shifted = pred.data - xp.max(pred.data, axis=-1, keepdims=True)
+    exp_logits = xp.exp(logits_shifted)
+    softmax_probs = exp_logits / xp.sum(exp_logits, axis=-1, keepdims=True)
 
     if target.data.ndim == pred.data.ndim:
-        loss_val = -xp.sum(target.data * xp.log(pred_clipped))  / pred.data.shape[0]
+        loss_val = -xp.sum(target.data * xp.log(softmax_probs + 1e-8)) / pred.data.shape[0]
     else:
         batch_size = pred.data.shape[0]
-        log_probs = xp.log(pred_clipped)
+        log_probs = xp.log(softmax_probs + 1e-8)
         loss_val = -xp.sum(log_probs[xp.arange(batch_size), target.data]) / batch_size
 
     out = Tensor(loss_val)
@@ -223,20 +244,20 @@ def cross_entropy_loss(pred, target):
     out.parents = {pred}
 
     def backward():
-        if pred.requires_grad:
+        if pred.req_grad:
             if pred.grad is None:
                 pred.grad = xp.zeros_like(pred.data)
 
             batch_size = pred.data.shape[0]
             if target.data.ndim == pred.data.ndim:
-                grad = -(target.data / xp.clip(pred.data, eps, 1 - eps))
+                grad = (softmax_probs - target.data) / batch_size
             else:
-                grad = pred.data.copy()
+                grad = softmax_probs.copy()
                 grad[xp.arange(batch_size), target.data] -= 1
                 grad = grad / batch_size
             pred.grad = pred.grad + grad * out.grad
     
-    out.backward = backward
+    out._backward = backward
     return out
 
 @register_op("bce_loss")
@@ -254,7 +275,7 @@ def bce_loss(pred, target):
     out.parents = {pred}
 
     def backward():
-        if pred.requires_grad:
+        if pred.req_grad:
             if pred.grad is None:
                 pred.grad = xp.zeros_like(pred.data)
 
@@ -262,5 +283,5 @@ def bce_loss(pred, target):
             grad = grad / pred.data.size
             pred.grad = pred.grad + grad * out.grad
     
-    out.backward = backward
+    out._backward = backward
     return out
