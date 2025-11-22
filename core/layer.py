@@ -29,7 +29,7 @@ class Linear(Layer):
         limit = device.xp.sqrt(6 / (in_features + out_features))
         
         self.weight = Tensor(
-            device.xp.random.uniform(-limit, limit, (in_features, out_features)), 
+            device.random.uniform(-limit, limit, (in_features, out_features)), 
             req_grad=True)
         self.bias = (
             Tensor(device.xp.zeros(out_features), req_grad=True) if bias else None)

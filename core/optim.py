@@ -71,3 +71,4 @@ class Adam(Optimizer):
             p.data = p.data - self.lr * m_hat / (device.xp.sqrt(v_hat) + self.eps)
 
         self.zero_grad()
+

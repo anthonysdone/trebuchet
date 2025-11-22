@@ -146,7 +146,8 @@ def relu(x):
         if x.req_grad:
             if x.grad is None: 
                 x.grad = device.xp.zeros_like(x.data)
-            x.grad = x.grad + out.grad * mask
+            if out.grad is not None:
+                x.grad = x.grad + out.grad * mask
     
     out._backward = backward
     return out

@@ -4,6 +4,7 @@ from .layer import Layer, Linear, Relu, Sigmoid, Tanh, Softmax
 from .network import Network
 from . import ops
 from . import optim
+from . import scheduler
 from . import registry
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     'ops',
     'optim',
     'registry',
+    'scheduler',
 ]

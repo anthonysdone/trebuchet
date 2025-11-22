@@ -1,6 +1,7 @@
 OPS = {}
 LAYERS = {}
 OPTIMS = {}
+SCHEDULERS = {}
 
 def register_op(name):
     def deco(fn):
@@ -17,5 +18,11 @@ def register_layer(name):
 def register_optim(name):
     def deco(cls):
         OPTIMS[name] = cls
+        return cls
+    return deco
+
+def register_scheduler(name):
+    def deco(cls):
+        SCHEDULERS[name] = cls
         return cls
     return deco
